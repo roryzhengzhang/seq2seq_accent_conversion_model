@@ -2,6 +2,7 @@ import os
 import time
 import argparse
 import math
+from tqdm import tqdm 
 from numpy import finfo
 
 import torch
@@ -11,10 +12,11 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
 from model import Tacotron2
-from data_utils import TextMelLoader, TextMelCollate
+from data_utils import AudioDataset, AudioCollate
 from loss_function import Tacotron2Loss
 from logger import Tacotron2Logger
 from hparams import create_hparams
+from torch.utils.tensorboard import SummaryWriter
 
 
 def reduce_tensor(tensor, n_gpus):
@@ -41,9 +43,14 @@ def init_distributed(hparams, n_gpus, rank, group_name):
 
 def prepare_dataloaders(hparams):
     # Get data, data loaders and collate function ready
-    trainset = TextMelLoader(hparams.training_files, hparams)
-    valset = TextMelLoader(hparams.validation_files, hparams)
-    collate_fn = TextMelCollate(hparams.n_frames_per_step)
+
+    # trainset = TextMelLoader(hparams.training_files, hparams)
+    # valset = TextMelLoader(hparams.validation_files, hparams)
+    # collate_fn = TextMelCollate(hparams.n_frames_per_step)
+
+    trainset = AudioDataset(hparams.training_files, hparams)
+    valset = AudioDataset(hparams.validation_files, hparams)
+    collate_fn = AudioCollate(hparams.n_frames_per_step)
 
     if hparams.distributed_run:
         train_sampler = DistributedSampler(trainset)
@@ -52,7 +59,7 @@ def prepare_dataloaders(hparams):
         train_sampler = None
         shuffle = True
 
-    train_loader = DataLoader(trainset, num_workers=1, shuffle=shuffle,
+    train_loader = DataLoader(trainset, num_workers=0, shuffle=shuffle,
                               sampler=train_sampler,
                               batch_size=hparams.batch_size, pin_memory=False,
                               drop_last=True, collate_fn=collate_fn)
@@ -71,7 +78,9 @@ def prepare_directories_and_logger(output_directory, log_directory, rank):
 
 
 def load_model(hparams):
-    model = Tacotron2(hparams).cuda()
+    # remove cuda() for macOS
+    # model = Tacotron2(hparams).cuda()
+    model = Tacotron2(hparams)
     if hparams.fp16_run:
         model.decoder.attention_layer.score_mask_value = finfo('float16').min
 
@@ -124,7 +133,7 @@ def validate(model, criterion, valset, iteration, batch_size, n_gpus,
     model.eval()
     with torch.no_grad():
         val_sampler = DistributedSampler(valset) if distributed_run else None
-        val_loader = DataLoader(valset, sampler=val_sampler, num_workers=1,
+        val_loader = DataLoader(valset, sampler=val_sampler, num_workers=0,
                                 shuffle=False, batch_size=batch_size,
                                 pin_memory=False, collate_fn=collate_fn)
 
@@ -205,6 +214,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
         print("Epoch: {}".format(epoch))
+        pbar = tqdm(total=len(train_loader), ncols=0, desc="train")
         for i, batch in enumerate(train_loader):
             start = time.perf_counter()
             for param_group in optimizer.param_groups:
@@ -234,6 +244,9 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                     model.parameters(), hparams.grad_clip_thresh)
 
             optimizer.step()
+
+            pbar.update(1)
+            pbar.set_postfix(loss=loss.item(), grad_norm=grad_norm)
 
             if not is_overflow and rank == 0:
                 duration = time.perf_counter() - start

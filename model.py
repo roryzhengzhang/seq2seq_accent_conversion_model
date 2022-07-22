@@ -56,6 +56,10 @@ class Attention(nn.Module):
 
         processed_query = self.query_layer(query.unsqueeze(1))
         processed_attention_weights = self.location_layer(attention_weights_cat)
+
+        print(f"query: {processed_query.size()}")
+        print(f"attention_weights_cat: {processed_attention_weights.size()}")
+        print(f"processed_memory: {processed_memory.size()}")
         energies = self.v(torch.tanh(
             processed_query + processed_attention_weights + processed_memory))
 
@@ -73,6 +77,7 @@ class Attention(nn.Module):
         attention_weights_cat: previous and cummulative attention weights
         mask: binary mask for padded data
         """
+
         alignment = self.get_alignment_energies(
             attention_hidden_state, processed_memory, attention_weights_cat)
 
@@ -145,14 +150,92 @@ class Postnet(nn.Module):
 
         return x
 
+class pyramidal_BiLSTM(nn.Module):
+    """
+        p-BiLSTM module:
+        - BiLSTM reducing time resolution by 2
+    """
 
-class Encoder(nn.Module):
+    def __init__(self, hparams):
+        super(pyramidal_BiLSTM, self).__init__()
+
+        self.encoder_embedding_dim = hparams.encoder_embedding_dim
+
+        # after reshaping, feature dim per time steps will time 2
+
+        self.lstm1 = nn.LSTM(self.encoder_embedding_dim*2,
+                    int(self.encoder_embedding_dim / 2), 1,
+                    batch_first=True, bidirectional=True)
+        
+        self.post_layer1 = nn.Sequential(
+            nn.ReLU(),
+            nn.BatchNorm1d(self.encoder_embedding_dim)
+        )
+
+        self.lstm2 = nn.LSTM(self.encoder_embedding_dim*2,
+                    int(self.encoder_embedding_dim / 2), 1,
+                    batch_first=True, bidirectional=True)
+        
+        self.post_layer2 = nn.Sequential(
+            nn.ReLU(),
+            nn.BatchNorm1d(self.encoder_embedding_dim)
+        )
+        
+    
+    def forward(self, inputs):
+        batch_size, max_len = inputs.size(0), inputs.size(1)
+        num_units = self.encoder_embedding_dim
+        # pad inputs to be divisible by 2
+        pads = (0, 0, 0, torch.remainder(torch.tensor(max_len), 2), 0, 0)
+        x = F.pad(inputs, pads, 'constant', 0)
+        
+        #reshape inputs to (N, max_len / 2 + max_len % 2, num_units * 2)
+        x = torch.reshape(x, (batch_size, -1, num_units * 2))
+        #calculate new input lengths for each input after reducing time resolution by 2
+        # half_input_lengths = torch.div(input_lengths, 2, rounding_mode='floor')
+        # x = nn.utils.rnn.pack_padded_sequence(
+        #     x, half_input_lengths, batch_first=True)
+        
+        # self.lstm1.flatten_parameters()
+        outputs, _ = self.lstm1(x)
+        print(f"p-lstm output size: {outputs.size()}")
+        # swap feature and len dims for batch normalization
+        outputs = outputs.transpose(1, 2)
+        outputs = self.post_layer1(outputs)
+        outputs = outputs.transpose(1, 2)
+
+        # outputs, _ = nn.utils.rnn.pad_packed_sequence(
+        #     outputs, batch_first=True)
+
+        max_len = outputs.size(1)
+        pads = (0, 0, 0, torch.remainder(torch.tensor(max_len), 2), 0, 0)
+        x = F.pad(outputs, pads, 'constant', 0)
+
+        x = torch.reshape(x, (batch_size, -1, num_units * 2))
+        # half_input_lengths = torch.div(half_input_lengths, 2, rounding_mode='floor')
+        # x = nn.utils.rnn.pack_padded_sequence(
+        #     x, half_input_lengths, batch_first=True)
+        
+        # self.lstm1.flatten_parameters()
+        outputs, _ = self.lstm2(x)
+        outputs = outputs.transpose(1, 2)
+        outputs = self.post_layer2(outputs)
+        outputs = outputs.transpose(1, 2)
+
+        # outputs, _ = nn.utils.rnn.pad_packed_sequence(
+        #     outputs, batch_first=True)
+
+        # return the output of last LSTM cell
+        return outputs
+
+
+class BNFEncoder(nn.Module):
     """Encoder module:
         - Three 1-d convolution banks
         - Bidirectional LSTM
     """
     def __init__(self, hparams):
-        super(Encoder, self).__init__()
+        super(BNFEncoder, self).__init__()
 
         convolutions = []
         for _ in range(hparams.encoder_n_convolutions):
@@ -166,26 +249,32 @@ class Encoder(nn.Module):
             convolutions.append(conv_layer)
         self.convolutions = nn.ModuleList(convolutions)
 
-        self.lstm = nn.LSTM(hparams.encoder_embedding_dim,
-                            int(hparams.encoder_embedding_dim / 2), 1,
-                            batch_first=True, bidirectional=True)
+        # self.lstm = nn.LSTM(hparams.encoder_embedding_dim,
+        #                     int(hparams.encoder_embedding_dim / 2), 1,
+        #                     batch_first=True, bidirectional=True)
+
+        self.p_lstm = pyramidal_BiLSTM(hparams)
 
     def forward(self, x, input_lengths):
+        # shape of conv input -> (feature, len), because we want to learn context info across time steps
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, self.training)
 
         x = x.transpose(1, 2)
 
-        # pytorch tensor are not reversible, hence the conversion
-        input_lengths = input_lengths.cpu().numpy()
-        x = nn.utils.rnn.pack_padded_sequence(
-            x, input_lengths, batch_first=True)
+        outputs = self.p_lstm(x)
 
-        self.lstm.flatten_parameters()
-        outputs, _ = self.lstm(x)
+        # # pytorch tensor are not reversible, hence the conversion
+        # input_lengths = input_lengths.cpu().numpy()
+        # x = nn.utils.rnn.pack_padded_sequence(
+        #     x, input_lengths, batch_first=True)
 
-        outputs, _ = nn.utils.rnn.pad_packed_sequence(
-            outputs, batch_first=True)
+        # # to make the memory of parameter contiguous
+        # self.lstm.flatten_parameters()
+        # outputs, _ = self.lstm(x)
+
+        # outputs, _ = nn.utils.rnn.pad_packed_sequence(
+        #     outputs, batch_first=True)
 
         return outputs
 
@@ -195,8 +284,10 @@ class Encoder(nn.Module):
 
         x = x.transpose(1, 2)
 
-        self.lstm.flatten_parameters()
-        outputs, _ = self.lstm(x)
+        outputs = self.p_lstm(x)
+
+        # self.lstm.flatten_parameters()
+        # outputs, _ = self.lstm(x)
 
         return outputs
 
@@ -209,6 +300,7 @@ class Decoder(nn.Module):
         self.encoder_embedding_dim = hparams.encoder_embedding_dim
         self.attention_rnn_dim = hparams.attention_rnn_dim
         self.decoder_rnn_dim = hparams.decoder_rnn_dim
+        self.decoder_input_dim = hparams.decoder_input_dim
         self.prenet_dim = hparams.prenet_dim
         self.max_decoder_steps = hparams.max_decoder_steps
         self.gate_threshold = hparams.gate_threshold
@@ -220,24 +312,24 @@ class Decoder(nn.Module):
             [hparams.prenet_dim, hparams.prenet_dim])
 
         self.attention_rnn = nn.LSTMCell(
-            hparams.prenet_dim + hparams.encoder_embedding_dim,
+            hparams.prenet_dim + hparams.decoder_input_dim,
             hparams.attention_rnn_dim)
 
         self.attention_layer = Attention(
-            hparams.attention_rnn_dim, hparams.encoder_embedding_dim,
+            hparams.attention_rnn_dim, hparams.decoder_input_dim,
             hparams.attention_dim, hparams.attention_location_n_filters,
             hparams.attention_location_kernel_size)
 
         self.decoder_rnn = nn.LSTMCell(
-            hparams.attention_rnn_dim + hparams.encoder_embedding_dim,
+            hparams.attention_rnn_dim + hparams.decoder_input_dim,
             hparams.decoder_rnn_dim, 1)
 
         self.linear_projection = LinearNorm(
-            hparams.decoder_rnn_dim + hparams.encoder_embedding_dim,
+            hparams.decoder_rnn_dim + hparams.decoder_input_dim,
             hparams.n_mel_channels * hparams.n_frames_per_step)
 
         self.gate_layer = LinearNorm(
-            hparams.decoder_rnn_dim + hparams.encoder_embedding_dim, 1,
+            hparams.decoder_rnn_dim + hparams.decoder_input_dim, 1,
             bias=True, w_init_gain='sigmoid')
 
     def get_go_frame(self, memory):
@@ -255,7 +347,7 @@ class Decoder(nn.Module):
             B, self.n_mel_channels * self.n_frames_per_step).zero_())
         return decoder_input
 
-    def initialize_decoder_states(self, memory, mask):
+    def initialize_decoder_states(self, memory, mask=None):
         """ Initializes attention rnn states, decoder rnn states, attention
         weights, attention cumulative weights, attention context, stores memory
         and stores processed memory
@@ -282,9 +374,10 @@ class Decoder(nn.Module):
         self.attention_weights_cum = Variable(memory.data.new(
             B, MAX_TIME).zero_())
         self.attention_context = Variable(memory.data.new(
-            B, self.encoder_embedding_dim).zero_())
+            B, self.decoder_input_dim).zero_())
 
         self.memory = memory
+        print(f"memory size: {memory.size()}")
         self.processed_memory = self.attention_layer.memory_layer(memory)
         self.mask = mask
 
@@ -466,22 +559,24 @@ class Tacotron2(nn.Module):
         std = sqrt(2.0 / (hparams.n_symbols + hparams.symbols_embedding_dim))
         val = sqrt(3.0) * std  # uniform bounds for std
         self.embedding.weight.data.uniform_(-val, val)
-        self.encoder = Encoder(hparams)
+        self.encoder = BNFEncoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
 
     def parse_batch(self, batch):
-        text_padded, input_lengths, mel_padded, gate_padded, \
-            output_lengths = batch
-        text_padded = to_gpu(text_padded).long()
+        bnf_padded, input_lengths, mel_padded, gate_padded, \
+            output_lengths, speaker_emb, accent_emb = batch
+        bnf_padded = to_gpu(bnf_padded).float()
         input_lengths = to_gpu(input_lengths).long()
         max_len = torch.max(input_lengths.data).item()
         mel_padded = to_gpu(mel_padded).float()
         gate_padded = to_gpu(gate_padded).float()
         output_lengths = to_gpu(output_lengths).long()
+        speaker_emb = to_gpu(speaker_emb).float()
+        accent_emb = to_gpu(accent_emb).float()
 
         return (
-            (text_padded, input_lengths, mel_padded, max_len, output_lengths),
+            (bnf_padded, input_lengths, mel_padded, max_len, output_lengths, speaker_emb, accent_emb),
             (mel_padded, gate_padded))
 
     def parse_output(self, outputs, output_lengths=None):
@@ -497,15 +592,27 @@ class Tacotron2(nn.Module):
         return outputs
 
     def forward(self, inputs):
-        text_inputs, text_lengths, mels, max_len, output_lengths = inputs
-        text_lengths, output_lengths = text_lengths.data, output_lengths.data
+        bnf_padded, bnf_lengths, mels, max_len, output_lengths, speaker_embs, accent_embs = inputs
+        bnf_lengths, output_lengths = bnf_lengths.data, output_lengths.data
 
-        embedded_inputs = self.embedding(text_inputs).transpose(1, 2)
+        # embedded_inputs = self.embedding(bnf_padded).transpose(1, 2)
 
-        encoder_outputs = self.encoder(embedded_inputs, text_lengths)
+        bnf_inputs = bnf_padded.transpose(1, 2)
+        
+        encoder_outputs = self.encoder(bnf_inputs, bnf_lengths)
+       
+        # repeat speaker and accent embs along time steps
+
+        encoder_output_length = encoder_outputs.size(1)
+        speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+        accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+        # concatenate BNF, speaker, and accent vector element-wise
+        decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
+
+        memory_lengths = torch.tensor([ b.size(0) for b in decoder_inputs ])
 
         mel_outputs, gate_outputs, alignments = self.decoder(
-            encoder_outputs, mels, memory_lengths=text_lengths)
+            decoder_inputs, mels, memory_lengths=memory_lengths)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
@@ -515,6 +622,7 @@ class Tacotron2(nn.Module):
             output_lengths)
 
     def inference(self, inputs):
+        # feature x len
         embedded_inputs = self.embedding(inputs).transpose(1, 2)
         encoder_outputs = self.encoder.inference(embedded_inputs)
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
