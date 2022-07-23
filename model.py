@@ -609,7 +609,7 @@ class Tacotron2(nn.Module):
         # concatenate BNF, speaker, and accent vector element-wise
         decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
 
-        memory_lengths = torch.tensor([ b.size(0) for b in decoder_inputs ])
+        memory_lengths = torch.tensor([ b.size(0) for b in decoder_inputs ]).cuda()
 
         mel_outputs, gate_outputs, alignments = self.decoder(
             decoder_inputs, mels, memory_lengths=memory_lengths)
