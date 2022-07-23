@@ -51,7 +51,7 @@ class AudioDataset(torch.utils.data.Dataset):
         return self.get_vec_mel_speaker_accent_pair(index)
 
     def __len__(self):
-        return len(self.audio_list)
+        return len(self.src_audio_list)
 
     def get_vec_mel_speaker_accent_pair(self, index):
         src_wav = self.src_audio_list[index]
