@@ -40,7 +40,7 @@ class AudioDataset(torch.utils.data.Dataset):
             for line in f:
                 line = line.replace('\n', '')
                 splits = line.split(',')
-                src_wav, tar_wav, speaker, accent = splits[0], splits[1], splits[2], split[3]
+                src_wav, tar_wav, speaker, accent = splits[0], splits[1], splits[2], splits[3]
                 # filename = os.path.join(hparams.audio_dir, filename)
                 self.src_audio_list.append(splits[0])
                 self.tar_audio_list.append(splits[1])
