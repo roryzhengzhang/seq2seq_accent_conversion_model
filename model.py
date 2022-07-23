@@ -57,9 +57,6 @@ class Attention(nn.Module):
         processed_query = self.query_layer(query.unsqueeze(1))
         processed_attention_weights = self.location_layer(attention_weights_cat)
 
-        print(f"query: {processed_query.size()}")
-        print(f"attention_weights_cat: {processed_attention_weights.size()}")
-        print(f"processed_memory: {processed_memory.size()}")
         energies = self.v(torch.tanh(
             processed_query + processed_attention_weights + processed_memory))
 
@@ -198,7 +195,6 @@ class pyramidal_BiLSTM(nn.Module):
         
         # self.lstm1.flatten_parameters()
         outputs, _ = self.lstm1(x)
-        print(f"p-lstm output size: {outputs.size()}")
         # swap feature and len dims for batch normalization
         outputs = outputs.transpose(1, 2)
         outputs = self.post_layer1(outputs)
@@ -377,7 +373,6 @@ class Decoder(nn.Module):
             B, self.decoder_input_dim).zero_())
 
         self.memory = memory
-        print(f"memory size: {memory.size()}")
         self.processed_memory = self.attention_layer.memory_layer(memory)
         self.mask = mask
 
