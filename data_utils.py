@@ -45,7 +45,7 @@ class AudioDataset(torch.utils.data.Dataset):
                 self.src_audio_list.append(splits[0])
                 self.tar_audio_list.append(splits[1])
                 self.speaker_info.append(splits[2])
-                self.accent_info.append(split[3])
+                self.accent_info.append(splits[3])
 
     def __getitem__(self, index):
         return self.get_vec_mel_speaker_accent_pair(index)
