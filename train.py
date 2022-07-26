@@ -78,7 +78,10 @@ def prepare_directories_and_logger(output_directory, log_directory, rank):
 
 
 def load_model(hparams):
-    model = Tacotron2(hparams).cuda()
+    if torch.cuda.is_available():
+        model = Tacotron2(hparams).cuda()
+    else:
+        model = Tacotron2(hparams)
     # remove cuda() for macOS
     # model = Tacotron2(hparams)
     if hparams.fp16_run:

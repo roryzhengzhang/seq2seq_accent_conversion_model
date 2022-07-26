@@ -276,7 +276,7 @@ class BNFEncoder(nn.Module):
 
     def inference(self, x):
         for conv in self.convolutions:
-            x = F.dropout(F.relu(conv(x)), 0.5, self.training)
+            x = F.dropout(F.relu(conv(x)), 0.5, False)
 
         x = x.transpose(1, 2)
 
@@ -618,10 +618,15 @@ class Tacotron2(nn.Module):
 
     def inference(self, inputs):
         # feature x len
-        embedded_inputs = self.embedding(inputs).transpose(1, 2)
-        encoder_outputs = self.encoder.inference(embedded_inputs)
+        bnf, speaker_embs, accent_embs = inputs
+        bnf = bnf.transpose(1, 2)
+        encoder_outputs = self.encoder.inference(bnf)
+        encoder_output_length = encoder_outputs.size(1)
+        speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+        accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+        decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
-            encoder_outputs)
+            decoder_inputs)
 
         mel_outputs_postnet = self.postnet(mel_outputs)
         mel_outputs_postnet = mel_outputs + mel_outputs_postnet
