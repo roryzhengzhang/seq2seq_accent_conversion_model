@@ -618,7 +618,7 @@ class Tacotron2(nn.Module):
 
     def inference(self, inputs):
         # feature x len
-        bnf, speaker_emb, accent_emb = inputs
+        bnf, speaker_embs, accent_embs = inputs
         bnf = bnf.transpose(1, 2)
         encoder_outputs = self.encoder.inference(bnf)
         encoder_output_length = encoder_outputs.size(1)
