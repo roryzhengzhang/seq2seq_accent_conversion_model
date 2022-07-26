@@ -35,7 +35,7 @@ def wav2vec(filename):
 hparams = create_hparams()
 hparams.sampling_rate = 16000
 
-checkpoint_path = "checkpoint/checkpoint_9600.zip"
+checkpoint_path = "checkpoint/checkpoint_11200.zip"
 model = load_model(hparams)
 if torch.cuda.is_available():
     model.load_state_dict(torch.load(checkpoint_path)['state_dict'])
