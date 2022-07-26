@@ -35,7 +35,7 @@ def wav2vec(filename):
 hparams = create_hparams()
 hparams.sampling_rate = 16000
 
-checkpoint_path = "checkpoint/checkpoint_11200.zip"
+checkpoint_path = "checkpoint/train_0726/checkpoint_19000.zip"
 model = load_model(hparams)
 if torch.cuda.is_available():
     model.load_state_dict(torch.load(checkpoint_path)['state_dict'])
@@ -66,4 +66,5 @@ plot_data((mel_outputs.float().data.cpu().numpy()[0],
 # waveforms = hifi_gan.decode_batch(mel_outputs)
 
 waveforms, sr = hifi_gan.generate(mel_outputs)
+print(f"sample rate: {sr}")
 torchaudio.save(f'output/{audio_name}_syn.wav',waveforms.squeeze(1), 16000)
