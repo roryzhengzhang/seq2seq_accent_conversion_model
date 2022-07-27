@@ -224,8 +224,6 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
         pbar = tqdm(total=len(train_loader), ncols=2, desc="train")
         for i, batch in enumerate(train_loader):
             start = time.perf_counter()
-            # for param_group in optimizer.param_groups:
-            #     param_group['lr'] = learning_rate
             
             x, y = model.parse_batch(batch)
             y_pred = model(x)
