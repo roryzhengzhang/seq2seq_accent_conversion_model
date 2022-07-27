@@ -527,7 +527,7 @@ class Decoder(nn.Module):
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output]
             alignments += [alignment]
-
+            # end the decoding when stop probability > gate_threshold
             if torch.sigmoid(gate_output.data) > self.gate_threshold:
                 break
             elif len(mel_outputs) == self.max_decoder_steps:
@@ -557,6 +557,7 @@ class Tacotron2(nn.Module):
         self.encoder = BNFEncoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
+        self.use_accent_emb = hparams.use_accent_emb
 
     def parse_batch(self, batch):
         bnf_padded, input_lengths, mel_padded, gate_padded, \
@@ -600,9 +601,13 @@ class Tacotron2(nn.Module):
 
         encoder_output_length = encoder_outputs.size(1)
         speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-        accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+        if self.use_accent_emb:
+            accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+            decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
+        else:
+            decoder_inputs = torch.cat((encoder_outputs, speaker_embs), 2)
         # concatenate BNF, speaker, and accent vector element-wise
-        decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
+        
 
         memory_lengths = torch.tensor([ b.size(0) for b in decoder_inputs ]).cuda()
 
@@ -624,7 +629,13 @@ class Tacotron2(nn.Module):
         encoder_output_length = encoder_outputs.size(1)
         speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
         accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-        decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
+
+        if self.use_accent_emb:
+            accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+            decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
+        else:
+            decoder_inputs = torch.cat((encoder_outputs, speaker_embs), 2)
+
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
             decoder_inputs)
 

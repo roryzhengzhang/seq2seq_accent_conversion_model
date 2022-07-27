@@ -57,7 +57,7 @@ def create_hparams(hparams_string=None, verbose=False):
         "encoder_kernel_size": 5,
         "encoder_n_convolutions": 3,
         "encoder_embedding_dim": 1024,
-        "decoder_input_dim": 1536,
+        "decoder_input_dim": 1280,
 
         # Decoder parameters
         "n_frames_per_step": 1,  # currently only 1 is supported
@@ -95,7 +95,8 @@ def create_hparams(hparams_string=None, verbose=False):
 
         "audio_dir": "audio_data_16k",
         "speaker_embedding_dir": "speaker",
-        "accent_embedding_dir": "accent"
+        "accent_embedding_dir": "accent",
+        "use_accent_emb": False
     })
 
     return hparams
