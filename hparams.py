@@ -30,7 +30,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # Data Parameters             #
         ################################
         "load_mel_from_disk": False,
-        "training_files": 'train_pairs.txt',
+        "training_files": 'tmp_train_pairs.txt',
         "validation_files": 'val_pairs.txt',
         "text_cleaners": ['english_cleaners'],
 
@@ -88,7 +88,7 @@ def create_hparams(hparams_string=None, verbose=False):
         "learning_rate": 1e-3,
         "weight_decay": 1e-6,
         "grad_clip_thresh": 1.0,
-        "lr_decay": 0.6,
+        "lr_decay": 0.995,
         "step_size": 1,
         "batch_size": 48,
         "mask_padding": True,  # set model's padded outputs to padded values

@@ -221,15 +221,17 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
         print("Epoch: {}; Learning rate: {:.6f}".format(epoch, optimizer.param_groups[0]['lr']))
-        pbar = tqdm(total=len(train_loader), ncols=0, desc="train")
+        pbar = tqdm(total=len(train_loader), ncols=2, desc="train")
         for i, batch in enumerate(train_loader):
             start = time.perf_counter()
             for param_group in optimizer.param_groups:
                 param_group['lr'] = learning_rate
 
-            model.zero_grad()
+            
             x, y = model.parse_batch(batch)
             y_pred = model(x)
+
+            optimizer.zero_grad()
 
             loss = criterion(y_pred, y)
             if hparams.distributed_run:
