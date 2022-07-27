@@ -184,7 +184,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=hparams.lr_decay)
 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=hparams.lr_decay, verbose=True)
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=hparams.step_size, gamma=hparams.lr_decay, verbose=True)
 
     if hparams.fp16_run:
         from apex import amp
@@ -220,7 +220,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     is_overflow = False
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
-        print("Epoch: {}".format(epoch))
+        print("Epoch: {}; Learning rate: {:.6f}".format(epoch, optimizer.param_groups[0]['lr']))
         pbar = tqdm(total=len(train_loader), ncols=0, desc="train")
         for i, batch in enumerate(train_loader):
             start = time.perf_counter()
