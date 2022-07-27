@@ -179,10 +179,10 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
     model = load_model(hparams)
     learning_rate = hparams.learning_rate
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
-                                 weight_decay=hparams.weight_decay)
+    # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
+    #                              weight_decay=hparams.weight_decay)
 
-    # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=hparams.lr_decay)
+    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
 
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=hparams.lr_decay, verbose=True)
 
