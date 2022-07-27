@@ -182,7 +182,9 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
                                  weight_decay=hparams.weight_decay)
 
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=hparams.lr_decay)
+    # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=hparams.lr_decay)
+
+    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=hparams.lr_decay, verbose=True)
 
     if hparams.fp16_run:
         from apex import amp
@@ -258,7 +260,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 print("Train loss {} {:.6f} Grad Norm {:.6f} LR: {} {:.2f}s/it".format(
                     iteration, reduced_loss, grad_norm, scheduler.get_last_lr(), duration))
                 logger.log_training(
-                    reduced_loss, grad_norm, learning_rate, duration, iteration)
+                    reduced_loss, grad_norm, scheduler.get_last_lr()[0], duration, iteration)
 
             if not is_overflow and (iteration % hparams.iters_per_checkpoint == 0):
                 validate(model, criterion, valset, iteration,
@@ -267,7 +269,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                 if rank == 0:
                     checkpoint_path = os.path.join(
                         output_directory, "checkpoint_{}".format(iteration))
-                    save_checkpoint(model, optimizer, learning_rate, iteration,
+                    save_checkpoint(model, optimizer, scheduler.get_last_lr()[0], iteration,
                                     checkpoint_path)
 
             iteration += 1
