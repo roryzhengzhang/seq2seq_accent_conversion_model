@@ -184,7 +184,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
 
     # scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=hparams.lr_decay)
 
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=hparams.step_size, gamma=hparams.lr_decay, verbose=True)
+    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=hparams.lr_decay, verbose=True)
 
     if hparams.fp16_run:
         from apex import amp
