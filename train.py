@@ -220,7 +220,6 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     is_overflow = False
     # ================ MAIN TRAINNIG LOOP! ===================
     for epoch in range(epoch_offset, hparams.epochs):
-        scheduler.step()
         print("Epoch: {}; Learning rate: {:.6f}".format(epoch, optimizer.param_groups[0]['lr']))
         pbar = tqdm(total=len(train_loader), ncols=2, desc="train")
         for i, batch in enumerate(train_loader):
@@ -254,6 +253,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
                     model.parameters(), hparams.grad_clip_thresh)
 
             optimizer.step()
+            scheduler.step()
 
             pbar.update(1)
             pbar.set_postfix(loss=loss.item(), grad_norm=grad_norm)
