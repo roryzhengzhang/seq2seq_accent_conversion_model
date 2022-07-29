@@ -231,6 +231,7 @@ class PPGMelLoader(torch.utils.data.Dataset):
                 if not os.path.isdir(ppg_path):
                     os.makedirs(ppg_path)
                 if not os.path.isfile(os.path.join(ppg_path, filename+'.npy')):
+                    'file not existed'
                     np.save(os.path.join(ppg_path, filename+'.npy'), ppg_feat_pair[0].astype(np.float32))
                 if not os.path.isdir(mel_path):
                     os.makedirs(mel_path)
