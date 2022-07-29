@@ -11,6 +11,26 @@ class AttrDict(dict):
 """
 def create_hparams(hparams_string=None, verbose=False):
     hparams = AttrDict({
+        
+        ################################
+        # PPGMelLoader Hyperparameters #
+        ################################
+
+        "is_full_ppg": True,  # Whether to use the full PPG or not.
+        "is_append_f0": False,  # Currently only effective at sentence level
+        "ppg_subsampling_factor": 1,  # Sub-sample the ppg & acoustic sequence.
+        # Cases
+        # |'load_feats_from_disk'|'is_cache_feats'|Note
+        # |True                  |True            |Error
+        # |True                  |False           |Please set cache path
+        # |False                 |True            |Overwrite the cache path
+        # |False                 |False           |Ignores the cache path
+        "load_feats_from_disk": False,  # Remember to set the path.
+        # Mutually exclusive with 'load_feats_from_disk', will overwrite
+        # 'feats_cache_path' if set.
+        "is_cache_feats": False,
+        "feats_cache_path": '',
+
         ################################
         # Experiment Parameters        #
         ################################
@@ -40,7 +60,7 @@ def create_hparams(hparams_string=None, verbose=False):
         "max_wav_value": 32768.0,
         "sampling_rate": 16000,
         "filter_length": 1024,
-        "hop_length": 256,
+        "hop_length": 160,
         "win_length": 1024,
         "n_mel_channels": 80,
         "n_bnf_channel": 1,
@@ -96,7 +116,7 @@ def create_hparams(hparams_string=None, verbose=False):
         "audio_dir": "audio_data_16k",
         "speaker_embedding_dir": "speaker",
         "accent_embedding_dir": "accent",
-        "use_accent_emb": False
+        "use_accent_emb": False,
     })
 
     return hparams
