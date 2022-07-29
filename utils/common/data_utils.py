@@ -185,10 +185,10 @@ class PPGMelLoader(torch.utils.data.Dataset):
         self.feats_cache_path = hparams.feats_cache_path
         self.ppg_subsampling_factor = hparams.ppg_subsampling_factor
         self.ppg_deps = DependenciesPPG()
-        self.ppg_root_path = '/Users/test/Documents/GitHub/tacotron2/ppg_emb'
-        self.mel_root_path = '/Users/test/Documents/GitHub/tacotron2/mel_emb'
-        self.speaker_emb_root_path = '/Users/test/Documents/GitHub/tacotron2/speaker_emb'
-        self.accent_emb_root_path = '/Users/test/Documents/GitHub/tacotron2/accent_emb'
+        self.ppg_root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ppg_emb')
+        self.mel_root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mel_emb')
+        self.speaker_emb_root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'speaker_emb')
+        self.accent_emb_root_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'accent_emb')
 
         if self.is_cache_feats and self.load_feats_from_disk:
             raise ValueError('If you are loading feats from the disk, do not '
