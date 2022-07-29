@@ -223,8 +223,8 @@ class PPGMelLoader(torch.utils.data.Dataset):
             for utterance_path in self.data_utterance_paths:
                 ppg_feat_pair = self.extract_utterance_feats(utterance_path,
                                                    self.is_full_ppg)
-                speaker = self.data_utterance_paths.split('/')[-2]
-                filename = self.data_utterance_paths.split('/')[-1][:-4]
+                speaker = utterance_path.split('/')[-2]
+                filename = utterance_path.split('/')[-1][:-4]
 
                 ppg_path = os.path.join(self.ppg_root_path, speaker)
                 mel_path = os.path.join(self.mel_root_path, speaker)
