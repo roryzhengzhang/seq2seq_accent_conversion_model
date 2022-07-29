@@ -19,7 +19,7 @@ import numpy as np
 import utils.ppg
 import re
 import math
-from utils.common.data_utterance_pb2 import DataUtterance, Segment, MetaData,\
+from kaldi.common.data_utterance_pb2 import DataUtterance, Segment, MetaData,\
     VocoderFeature
 from utils.common.align import write_tg_to_str, read_tg_from_str
 from utils.common.feat import read_wav_kaldi_internal
