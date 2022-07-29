@@ -37,13 +37,13 @@ import random
 import numpy as np
 import torch
 import torch.utils.data
-from common.utils import load_filepaths
-from common.utterance import Utterance
-from common import layers
-from ppg import DependenciesPPG
+from utils.common.utils import load_filepaths
+from utils.common.utterance import Utterance
+from utils.common import layers
+from utils.ppg import DependenciesPPG
 from scipy.io import wavfile
-from common import feat
-from common import ppg
+from utils.common import feat
+from utils.common import ppg
 
 
 # First order, dx(t) = 0.5(x(t + 1) - x(t - 1))
