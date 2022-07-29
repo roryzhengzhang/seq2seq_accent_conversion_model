@@ -256,9 +256,9 @@ class BNFEncoder(nn.Module):
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, self.training)
 
-        outputs = x.transpose(1, 2)
+        x = x.transpose(1, 2)
 
-        # outputs = self.p_lstm(x)
+        outputs = self.p_lstm(x)
 
         # # pytorch tensor are not reversible, hence the conversion
         # input_lengths = input_lengths.cpu().numpy()
@@ -278,9 +278,9 @@ class BNFEncoder(nn.Module):
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, False)
 
-        outputs = x.transpose(1, 2)
+        x = x.transpose(1, 2)
 
-        # outputs = self.p_lstm(x)
+        outputs = self.p_lstm(x)
 
         # self.lstm.flatten_parameters()
         # outputs, _ = self.lstm(x)
@@ -560,9 +560,9 @@ class Tacotron2(nn.Module):
         self.use_accent_emb = hparams.use_accent_emb
 
     def parse_batch(self, batch):
-        bnf_padded, input_lengths, mel_padded, gate_padded, \
+        ppg_padded, input_lengths, mel_padded, gate_padded, \
             output_lengths, speaker_emb, accent_emb = batch
-        bnf_padded = to_gpu(bnf_padded).float()
+        ppg_padded = to_gpu(ppg_padded).float()
         input_lengths = to_gpu(input_lengths).long()
         max_len = torch.max(input_lengths.data).item()
         mel_padded = to_gpu(mel_padded).float()
@@ -572,7 +572,7 @@ class Tacotron2(nn.Module):
         accent_emb = to_gpu(accent_emb).float()
 
         return (
-            (bnf_padded, input_lengths, mel_padded, max_len, output_lengths, speaker_emb, accent_emb),
+            (ppg_padded, input_lengths, mel_padded, max_len, output_lengths, speaker_emb, accent_emb),
             (mel_padded, gate_padded))
 
     def parse_output(self, outputs, output_lengths=None):
@@ -599,17 +599,13 @@ class Tacotron2(nn.Module):
        
         # repeat speaker and accent embs along time steps
 
-        decoder_inputs = encoder_outputs
-
         encoder_output_length = encoder_outputs.size(1)
-        if self.use_speaker_emb:
-            speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-            decoder_inputs = torch.cat((decoder_inputs, speaker_embs), 2)
-
+        speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
         if self.use_accent_emb:
             accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-            decoder_inputs = torch.cat((decoder_inputs, accent_embs), 2)
-
+            decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
+        else:
+            decoder_inputs = torch.cat((encoder_outputs, speaker_embs), 2)
         # concatenate BNF, speaker, and accent vector element-wise
         
 
@@ -627,23 +623,18 @@ class Tacotron2(nn.Module):
 
     def inference(self, inputs):
         # feature x len
-        bnf, speaker_embs, accent_embs = inputs
-        bnf = bnf.transpose(1, 2)
-        encoder_outputs = self.encoder.inference(bnf)
+        ppg, speaker_embs, accent_embs = inputs
+        ppg = ppg.transpose(1, 2)
+        encoder_outputs = self.encoder.inference(ppg)
         encoder_output_length = encoder_outputs.size(1)
         speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
         accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
 
-        decoder_inputs = encoder_outputs
-
-        encoder_output_length = encoder_outputs.size(1)
-        if self.use_speaker_emb:
-            speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-            decoder_inputs = torch.cat((decoder_inputs, speaker_embs), 2)
-
         if self.use_accent_emb:
             accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-            decoder_inputs = torch.cat((decoder_inputs, accent_embs), 2)
+            decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
+        else:
+            decoder_inputs = torch.cat((encoder_outputs, speaker_embs), 2)
 
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
             decoder_inputs)
