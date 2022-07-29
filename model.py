@@ -256,9 +256,9 @@ class BNFEncoder(nn.Module):
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, self.training)
 
-        x = x.transpose(1, 2)
+        outputs = x.transpose(1, 2)
 
-        outputs = self.p_lstm(x)
+        # outputs = self.p_lstm(x)
 
         # # pytorch tensor are not reversible, hence the conversion
         # input_lengths = input_lengths.cpu().numpy()
@@ -278,9 +278,9 @@ class BNFEncoder(nn.Module):
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, False)
 
-        x = x.transpose(1, 2)
+        outputs = x.transpose(1, 2)
 
-        outputs = self.p_lstm(x)
+        # outputs = self.p_lstm(x)
 
         # self.lstm.flatten_parameters()
         # outputs, _ = self.lstm(x)
@@ -599,13 +599,17 @@ class Tacotron2(nn.Module):
        
         # repeat speaker and accent embs along time steps
 
+        decoder_inputs = encoder_outputs
+
         encoder_output_length = encoder_outputs.size(1)
-        speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+        if self.use_speaker_emb:
+            speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+            decoder_inputs = torch.cat((decoder_inputs, speaker_embs), 2)
+
         if self.use_accent_emb:
             accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-            decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
-        else:
-            decoder_inputs = torch.cat((encoder_outputs, speaker_embs), 2)
+            decoder_inputs = torch.cat((decoder_inputs, accent_embs), 2)
+
         # concatenate BNF, speaker, and accent vector element-wise
         
 
@@ -630,11 +634,16 @@ class Tacotron2(nn.Module):
         speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
         accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
 
+        decoder_inputs = encoder_outputs
+
+        encoder_output_length = encoder_outputs.size(1)
+        if self.use_speaker_emb:
+            speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+            decoder_inputs = torch.cat((decoder_inputs, speaker_embs), 2)
+
         if self.use_accent_emb:
             accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-            decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
-        else:
-            decoder_inputs = torch.cat((encoder_outputs, speaker_embs), 2)
+            decoder_inputs = torch.cat((decoder_inputs, accent_embs), 2)
 
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
             decoder_inputs)
