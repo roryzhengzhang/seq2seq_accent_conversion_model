@@ -230,10 +230,12 @@ class PPGMelLoader(torch.utils.data.Dataset):
                 mel_path = os.path.join(self.mel_root_path, speaker)
                 if not os.path.isdir(ppg_path):
                     os.makedirs(ppg_path)
-                np.save(os.path.join(ppg_path, filename+'.npy'), ppg_feat_pair[0].astype(np.float32))
+                if not os.path.isfile(os.path.join(ppg_path, filename+'.npy')):
+                    np.save(os.path.join(ppg_path, filename+'.npy'), ppg_feat_pair[0].astype(np.float32))
                 if not os.path.isdir(mel_path):
                     os.makedirs(mel_path)
-                np.save(os.path.join(mel_path, filename+'.npy'), ppg_feat_pair[1].astype(np.float32))
+                if not os.path.isfile(os.path.join(mel_path, filename+'.npy')):
+                    np.save(os.path.join(mel_path, filename+'.npy'), ppg_feat_pair[1].astype(np.float32))
 
                 # self.ppg_sequences.append(ppg_feat_pair[0].astype(
                 #     np.float32))
