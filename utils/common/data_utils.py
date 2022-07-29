@@ -31,6 +31,7 @@
 
 """Modified from https://github.com/NVIDIA/tacotron2"""
 
+from msilib.schema import Error
 import os
 import pickle
 import random
@@ -164,7 +165,7 @@ def append_ppg(feats, f0):
 class PPGMelLoader(torch.utils.data.Dataset):
     """Loads [ppg, mel] pairs."""
 
-    def __init__(self, hparams, data_paths=None , data_utterance_paths=None):
+    def __init__(self, hparams, data_paths=None, data_utterance_paths=None):
         """Data loader for the PPG->Mel task.
 
         Args:
@@ -214,11 +215,22 @@ class PPGMelLoader(torch.utils.data.Dataset):
         #     self.accent_embs.append(np.load(accent_emb))
 
         if self.load_feats_from_disk:
-            print('Loading data from %s.' % self.feats_cache_path)
-            with open(self.feats_cache_path, 'rb') as f:
-                data = pickle.load(f)
-            self.ppg_sequences = data[0]
-            self.acoustic_sequences = data[1]
+            # print('Loading data from %s.' % self.feats_cache_path)
+            # with open(self.feats_cache_path, 'rb') as f:
+            #     data = pickle.load(f)
+            # self.ppg_sequences = data[0]
+            # self.acoustic_sequences = data[1]
+            if data_paths is None:
+                raise Error("data paths is None")
+            
+            with open(data_paths, 'r') as f:
+                for line in f:
+                    line = line.replace('/n', '')
+                    src_ppg, tar_mel, speaker_emb, accent_emb = line.split(',')
+                    self.ppg_sequences.append(src_ppg)
+                    self.acoustic_sequences.append(tar_mel)
+                    self.speaker_embs.append(speaker_emb)
+                    self.accent_embs.append(accent_emb)
         else:
             for utterance_path in self.data_utterance_paths:
                 speaker = utterance_path.split('/')[-2]
