@@ -51,8 +51,8 @@ def create_hparams(hparams_string=None, verbose=False):
         # Data Parameters             #
         ################################
         "load_mel_from_disk": False,
-        "training_files": 'train_pairs.txt',
-        "validation_files": 'val_pairs.txt',
+        "training_files": 'bdl_train_pairs.txt',
+        "validation_files": 'bdl_val_pairs.txt',
         "text_cleaners": ['english_cleaners'],
 
         ################################
@@ -118,6 +118,7 @@ def create_hparams(hparams_string=None, verbose=False):
         "speaker_embedding_dir": "speaker",
         "accent_embedding_dir": "accent",
         "use_accent_emb": False,
+        "use_speaker_emb": False,
     })
 
     return hparams
