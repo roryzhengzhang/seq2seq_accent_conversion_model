@@ -558,6 +558,7 @@ class Tacotron2(nn.Module):
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
         self.use_accent_emb = hparams.use_accent_emb
+        self.use_speaker_emb = hparams.use_speaker_emb
 
     def parse_batch(self, batch):
         bnf_padded, input_lengths, mel_padded, gate_padded, \
