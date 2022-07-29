@@ -1,23 +1,25 @@
+from genericpath import isfile
 import os
 import glob
 from random import shuffle
 
 pairs = []
 refer_name = 'bdl'
-for f in glob.glob(f"/Users/test/Documents/GitHub/tacotron2/data_wav_16k/{refer_name}/*.wav"):
+root = os.path.dirname(os.path.abspath(__file__))
+
+for f in glob.glob(os.path.join(root, f"data_wav_16k/{refer_name}/*.wav")):
     filename = f.split('/')[-1]
     audioname = filename[len(refer_name)+1:-4]
 
     for speaker in ['clb', 'EBVS', 'ERMS', 'MBMPS', 'NJS', 'rms', 'slt', 'bdl']:
+
         src_wav_emb = f'wav_emb/{refer_name}/{refer_name}_{audioname}.npy'
-        tar_audio_file = f'data_wav_16k/{speaker}/{speaker}_{audioname}.wav'
+        tar_mel_file = f'mel_emb/{speaker}/{speaker}_{audioname}.npy'
         speaker_emb = f'speaker_emb/{speaker}/{speaker}_{audioname}.npy'
         accent_emb = f'accent_emb/{speaker}/{speaker}_{audioname}.npy'
 
-        # print(f"{tar_audio_file}, {speaker_emb}, {accent_emb}")
-
-        if os.path.isfile(tar_audio_file):
-            pairs.append([src_wav_emb, tar_audio_file, speaker_emb, accent_emb])
+        if os.path.isfile(tar_mel_file):
+            pairs.append([src_wav_emb, tar_mel_file, speaker_emb, accent_emb])
     
 shuffle(pairs)
     
