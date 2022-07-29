@@ -43,7 +43,7 @@ from utils.common import layers
 from utils.ppg import DependenciesPPG
 from scipy.io import wavfile
 from utils.common import feat
-from utils.common import ppg
+from utils import ppg
 
 
 # First order, dx(t) = 0.5(x(t + 1) - x(t - 1))
