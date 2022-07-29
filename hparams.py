@@ -11,7 +11,7 @@ class AttrDict(dict):
 """
 def create_hparams(hparams_string=None, verbose=False):
     hparams = AttrDict({
-        
+
         ################################
         # PPGMelLoader Hyperparameters #
         ################################
@@ -30,6 +30,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # 'feats_cache_path' if set.
         "is_cache_feats": False,
         "feats_cache_path": '',
+        "n_acoustic_feat_dims": 80,
 
         ################################
         # Experiment Parameters        #
