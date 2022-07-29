@@ -26,8 +26,8 @@ from kaldi.feat.mfcc import Mfcc, MfccOptions
 from kaldi.matrix.sparse import SparseMatrix
 from kaldi.matrix import Matrix, Vector
 from kaldi.matrix.common import MatrixTransposeType
-from common import feat
-from common import decode
+from utils.common import feat
+from utils.common import decode
 from numpy import ndarray
 
 # Static resources
