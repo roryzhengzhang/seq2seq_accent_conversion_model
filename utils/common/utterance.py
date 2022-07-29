@@ -16,10 +16,10 @@
 
 import logging
 import numpy as np
-import utils.common.ppg
+import ppg
 import re
 import math
-from utils.common.data_utterance_pb2 import DataUtterance, Segment, MetaData,\
+from common.data_utterance_pb2 import DataUtterance, Segment, MetaData,\
     VocoderFeature
 from common.align import write_tg_to_str, read_tg_from_str
 from common.feat import read_wav_kaldi_internal
