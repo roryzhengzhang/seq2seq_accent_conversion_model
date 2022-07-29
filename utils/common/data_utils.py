@@ -221,22 +221,24 @@ class PPGMelLoader(torch.utils.data.Dataset):
             self.acoustic_sequences = data[1]
         else:
             for utterance_path in self.data_utterance_paths:
-                ppg_feat_pair = self.extract_utterance_feats(utterance_path,
-                                                   self.is_full_ppg)
                 speaker = utterance_path.split('/')[-2]
                 filename = utterance_path.split('/')[-1][:-4]
-
                 ppg_path = os.path.join(self.ppg_root_path, speaker)
                 mel_path = os.path.join(self.mel_root_path, speaker)
-                if not os.path.isdir(ppg_path):
-                    os.makedirs(ppg_path)
-                if not os.path.isfile(os.path.join(ppg_path, filename+'.npy')):
-                    print('file not existed')
-                    np.save(os.path.join(ppg_path, filename+'.npy'), ppg_feat_pair[0].astype(np.float32))
-                if not os.path.isdir(mel_path):
-                    os.makedirs(mel_path)
-                if not os.path.isfile(os.path.join(mel_path, filename+'.npy')):
-                    np.save(os.path.join(mel_path, filename+'.npy'), ppg_feat_pair[1].astype(np.float32))
+
+                if not os.path.isfile(os.path.join(ppg_path, filename+'.npy')) or not os.path.isfile(os.path.join(mel_path, filename+'.npy')):
+                    ppg_feat_pair = self.extract_utterance_feats(utterance_path,
+                                                   self.is_full_ppg)
+
+                    if not os.path.isdir(ppg_path):
+                        os.makedirs(ppg_path)
+                    if not os.path.isfile(os.path.join(ppg_path, filename+'.npy')):
+                        print('file not existed')
+                        np.save(os.path.join(ppg_path, filename+'.npy'), ppg_feat_pair[0].astype(np.float32))
+                    if not os.path.isdir(mel_path):
+                        os.makedirs(mel_path)
+                    if not os.path.isfile(os.path.join(mel_path, filename+'.npy')):
+                        np.save(os.path.join(mel_path, filename+'.npy'), ppg_feat_pair[1].astype(np.float32))
 
                 # self.ppg_sequences.append(ppg_feat_pair[0].astype(
                 #     np.float32))
