@@ -78,7 +78,7 @@ def create_hparams(hparams_string=None, verbose=False):
         "encoder_kernel_size": 5,
         "encoder_n_convolutions": 3,
         "encoder_embedding_dim": 512,
-        "decoder_input_dim": 1024,
+        "decoder_input_dim": 512,
 
         # Decoder parameters
         "n_frames_per_step": 1,  # currently only 1 is supported
