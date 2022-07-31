@@ -84,7 +84,7 @@ def prepare_dataloaders(hparams, mode='bnf'):
                                 sampler=train_sampler,
                                 batch_size=hparams.batch_size, pin_memory=False,
                                 drop_last=True, collate_fn=ppg_acoustics_collate)
-        return train_loader, valset, collate_fn
+        return train_loader, valset, ppg_acoustics_collate
 
 
 def prepare_directories_and_logger(output_directory, log_directory, rank):
