@@ -560,6 +560,7 @@ class Tacotron_PPG(nn.Module):
         self.encoder = PPGEncoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
+        self.use_speaker_emb = hparams.use_speaker_emb
         self.use_accent_emb = hparams.use_accent_emb
 
     def parse_batch(self, batch):
