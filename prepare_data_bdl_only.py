@@ -5,14 +5,15 @@ from random import shuffle
 
 pairs = []
 refer_name = 'bdl'
+mode = 'ppg'
 root = os.path.dirname(os.path.abspath(__file__))
 
 for f in glob.glob(os.path.join(root, f"data_wav_16k/{refer_name}/*.wav")):
     filename = f.split('/')[-1]
     audioname = filename[len(refer_name)+1:-4]
 
-    src_wav_emb = f'wav_emb/{refer_name}/{refer_name}_{audioname}.npy'
-    tar_mel_file = f'data_wav_16k/{refer_name}/{refer_name}_{audioname}.wav'
+    src_wav_emb = f'{mode}_emb/{refer_name}/{refer_name}_{audioname}.npy'
+    tar_mel_file = f'mel_emb/{refer_name}/{refer_name}_{audioname}.npy'
     speaker_emb = f'speaker_emb/{refer_name}/{refer_name}_{audioname}.npy'
     accent_emb = f'accent_emb/{refer_name}/{refer_name}_{audioname}.npy'
 
