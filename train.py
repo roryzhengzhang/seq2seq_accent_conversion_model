@@ -12,6 +12,8 @@ from torch.utils.data.distributed import DistributedSampler
 from torch.utils.data import DataLoader
 
 from model import Tacotron2
+from model_ppg import Tacotron_PPG
+from utils.common.data_utils import PPGMelDataset, ppg_acoustics_collate
 from data_utils import AudioDataset, AudioCollate
 from loss_function import Tacotron2Loss
 from logger import Tacotron2Logger
@@ -41,29 +43,48 @@ def init_distributed(hparams, n_gpus, rank, group_name):
     print("Done initializing distributed")
 
 
-def prepare_dataloaders(hparams):
+def prepare_dataloaders(hparams, mode='bnf'):
     # Get data, data loaders and collate function ready
 
     # trainset = TextMelLoader(hparams.training_files, hparams)
     # valset = TextMelLoader(hparams.validation_files, hparams)
     # collate_fn = TextMelCollate(hparams.n_frames_per_step)
 
-    trainset = AudioDataset(hparams.training_files, hparams)
-    valset = AudioDataset(hparams.validation_files, hparams)
-    collate_fn = AudioCollate(hparams.n_frames_per_step)
+    if mode == 'bnf':
+        print("loading BNF dataset")
+        trainset = AudioDataset(hparams.training_files, hparams)
+        valset = AudioDataset(hparams.validation_files, hparams)
+        collate_fn = AudioCollate(hparams.n_frames_per_step)
 
-    if hparams.distributed_run:
-        train_sampler = DistributedSampler(trainset)
-        shuffle = False
+        if hparams.distributed_run:
+            train_sampler = DistributedSampler(trainset)
+            shuffle = False
+        else:
+            train_sampler = None
+            shuffle = True
+
+        train_loader = DataLoader(trainset, num_workers=0, shuffle=shuffle,
+                                sampler=train_sampler,
+                                batch_size=hparams.batch_size, pin_memory=False,
+                                drop_last=True, collate_fn=collate_fn)
+        return train_loader, valset, collate_fn
     else:
-        train_sampler = None
-        shuffle = True
+        print("loading PPG dataset")
+        trainset = PPGMelDataset(hparams.training_files, hparams)
+        valset = PPGMelDataset(hparams.validation_files, hparams)
 
-    train_loader = DataLoader(trainset, num_workers=0, shuffle=shuffle,
-                              sampler=train_sampler,
-                              batch_size=hparams.batch_size, pin_memory=False,
-                              drop_last=True, collate_fn=collate_fn)
-    return train_loader, valset, collate_fn
+        if hparams.distributed_run:
+            train_sampler = DistributedSampler(trainset)
+            shuffle = False
+        else:
+            train_sampler = None
+            shuffle = True
+
+        train_loader = DataLoader(trainset, num_workers=0, shuffle=shuffle,
+                                sampler=train_sampler,
+                                batch_size=hparams.batch_size, pin_memory=False,
+                                drop_last=True, collate_fn=ppg_acoustics_collate)
+        return train_loader, valset, collate_fn
 
 
 def prepare_directories_and_logger(output_directory, log_directory, rank):
@@ -77,11 +98,17 @@ def prepare_directories_and_logger(output_directory, log_directory, rank):
     return logger
 
 
-def load_model(hparams):
-    if torch.cuda.is_available():
-        model = Tacotron2(hparams).cuda()
+def load_model(hparams, mode='bnf'):
+    if mode == 'bnf':
+        if torch.cuda.is_available():
+            model = Tacotron2(hparams).cuda()
+        else:
+            model = Tacotron2(hparams)
     else:
-        model = Tacotron2(hparams)
+        if torch.cuda.is_available():
+            model = Tacotron_PPG(hparams).cuda()
+        else:
+            model = Tacotron_PPG(hparams)
     # remove cuda() for macOS
     # model = Tacotron2(hparams)
     if hparams.fp16_run:
@@ -159,7 +186,7 @@ def validate(model, criterion, valset, iteration, batch_size, n_gpus,
 
 
 def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
-          rank, group_name, hparams):
+          rank, group_name, mode, hparams):
     """Training and validation logging results to tensorboard and stdout
 
     Params
@@ -177,7 +204,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     torch.manual_seed(hparams.seed)
     torch.cuda.manual_seed(hparams.seed)
 
-    model = load_model(hparams)
+    model = load_model(hparams, mode)
     learning_rate = hparams.learning_rate
     # optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate,
     #                              weight_decay=hparams.weight_decay)
@@ -199,7 +226,7 @@ def train(output_directory, log_directory, checkpoint_path, warm_start, n_gpus,
     logger = prepare_directories_and_logger(
         output_directory, log_directory, rank)
 
-    train_loader, valset, collate_fn = prepare_dataloaders(hparams)
+    train_loader, valset, collate_fn = prepare_dataloaders(hparams, mode)
 
     # Load checkpoint if one exists
     iteration = 0
@@ -292,11 +319,18 @@ if __name__ == '__main__':
                         required=False, help='rank of current gpu')
     parser.add_argument('--group_name', type=str, default='group_name',
                         required=False, help='Distributed group name')
-    parser.add_argument('--hparams', type=str,
-                        required=False, help='comma separated name=value pairs')
+    # parser.add_argument('--hparams', type=str,
+    #                     required=False, help='comma separated name value pairs')
+    parser.add_argument('--mode', type=str,
+                        required=False, help='mode of speech representation: PPG or BNF')
 
     args = parser.parse_args()
-    hparams = create_hparams(args.hparams)
+    if args.mode == 'bnf':
+        from hparams import create_hparams
+        hparams = create_hparams(args.hparams)
+    else:
+        from hparams_ppg import create_hparams
+        hparams = create_hparams(args.hparams)
 
     torch.backends.cudnn.enabled = hparams.cudnn_enabled
     torch.backends.cudnn.benchmark = hparams.cudnn_benchmark
@@ -308,4 +342,4 @@ if __name__ == '__main__':
     print("cuDNN Benchmark:", hparams.cudnn_benchmark)
 
     train(args.output_directory, args.log_directory, args.checkpoint_path,
-          args.warm_start, args.n_gpus, args.rank, args.group_name, hparams)
+          args.warm_start, args.n_gpus, args.rank, args.group_name, args.mode, hparams)

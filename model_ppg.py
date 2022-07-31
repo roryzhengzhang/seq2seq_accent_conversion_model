@@ -225,13 +225,17 @@ class pyramidal_BiLSTM(nn.Module):
         return outputs
 
 
-class BNFEncoder(nn.Module):
+class PPGEncoder(nn.Module):
     """Encoder module:
         - Three 1-d convolution banks
         - Bidirectional LSTM
     """
     def __init__(self, hparams):
-        super(BNFEncoder, self).__init__()
+        super(PPGEncoder, self).__init__()
+
+        self.prenet = Prenet(hparams.n_symbols,
+                             [hparams.symbols_embedding_dim,
+                              hparams.symbols_embedding_dim])
 
         convolutions = []
         for _ in range(hparams.encoder_n_convolutions):
@@ -245,45 +249,43 @@ class BNFEncoder(nn.Module):
             convolutions.append(conv_layer)
         self.convolutions = nn.ModuleList(convolutions)
 
-        # self.lstm = nn.LSTM(hparams.encoder_embedding_dim,
-        #                     int(hparams.encoder_embedding_dim / 2), 1,
-        #                     batch_first=True, bidirectional=True)
-
-        self.p_lstm = pyramidal_BiLSTM(hparams)
+        self.lstm = nn.LSTM(hparams.encoder_embedding_dim,
+                    int(hparams.encoder_embedding_dim / 2), 1,
+                    batch_first=True, bidirectional=True)
 
     def forward(self, x, input_lengths):
-        # shape of conv input -> (feature, len), because we want to learn context info across time steps
+        # x: (B, D, T) -> (B, T, D) -> (B, D, T)
+        x = self.prenet(x.transpose(1, 2)).transpose(1, 2)
+
         for conv in self.convolutions:
             x = F.dropout(F.relu(conv(x)), 0.5, self.training)
 
         x = x.transpose(1, 2)
 
-        outputs = self.p_lstm(x)
+        # pytorch tensor are not reversible, hence the conversion
+        input_lengths = input_lengths.cpu().numpy()
+        x = nn.utils.rnn.pack_padded_sequence(
+            x, input_lengths, batch_first=True)
 
-        # # pytorch tensor are not reversible, hence the conversion
-        # input_lengths = input_lengths.cpu().numpy()
-        # x = nn.utils.rnn.pack_padded_sequence(
-        #     x, input_lengths, batch_first=True)
+        self.lstm.flatten_parameters()
+        outputs, _ = self.lstm(x)
 
-        # # to make the memory of parameter contiguous
-        # self.lstm.flatten_parameters()
-        # outputs, _ = self.lstm(x)
-
-        # outputs, _ = nn.utils.rnn.pad_packed_sequence(
-        #     outputs, batch_first=True)
+        outputs, _ = nn.utils.rnn.pad_packed_sequence(
+            outputs, batch_first=True)
 
         return outputs
 
     def inference(self, x):
+        # x: (B, D, T) -> (B, T, D) -> (B, D, T)
+        x = self.prenet(x.transpose(1, 2)).transpose(1, 2)
+
         for conv in self.convolutions:
-            x = F.dropout(F.relu(conv(x)), 0.5, False)
+            x = F.dropout(F.relu(conv(x)), 0.5, self.training)
 
         x = x.transpose(1, 2)
 
-        outputs = self.p_lstm(x)
-
-        # self.lstm.flatten_parameters()
-        # outputs, _ = self.lstm(x)
+        self.lstm.flatten_parameters()
+        outputs, _ = self.lstm(x)
 
         return outputs
 
@@ -542,9 +544,9 @@ class Decoder(nn.Module):
         return mel_outputs, gate_outputs, alignments
 
 
-class Tacotron2(nn.Module):
+class Tacotron_PPG(nn.Module):
     def __init__(self, hparams):
-        super(Tacotron2, self).__init__()
+        super(Tacotron_PPG, self).__init__()
         self.mask_padding = hparams.mask_padding
         self.fp16_run = hparams.fp16_run
         self.n_mel_channels = hparams.n_mel_channels
@@ -554,7 +556,7 @@ class Tacotron2(nn.Module):
         std = sqrt(2.0 / (hparams.n_symbols + hparams.symbols_embedding_dim))
         val = sqrt(3.0) * std  # uniform bounds for std
         self.embedding.weight.data.uniform_(-val, val)
-        self.encoder = BNFEncoder(hparams)
+        self.encoder = PPGEncoder(hparams)
         self.decoder = Decoder(hparams)
         self.postnet = Postnet(hparams)
         self.use_accent_emb = hparams.use_accent_emb
@@ -588,24 +590,24 @@ class Tacotron2(nn.Module):
         return outputs
 
     def forward(self, inputs):
-        bnf_padded, bnf_lengths, mels, max_len, output_lengths, speaker_embs, accent_embs = inputs
-        bnf_lengths, output_lengths = bnf_lengths.data, output_lengths.data
+        ppg_padded, ppg_lengths, mels, max_len, output_lengths, speaker_embs, accent_embs = inputs
+        ppg_lengths, output_lengths = ppg_lengths.data, output_lengths.data
 
         # embedded_inputs = self.embedding(bnf_padded).transpose(1, 2)
 
-        bnf_inputs = bnf_padded.transpose(1, 2)
+        ppg_inputs = ppg_padded.transpose(1, 2)
         
-        encoder_outputs = self.encoder(bnf_inputs, bnf_lengths)
-       
-        # repeat speaker and accent embs along time steps
+        encoder_outputs = self.encoder(ppg_inputs, ppg_lengths)
+        decoder_inputs = encoder_outputs
 
         encoder_output_length = encoder_outputs.size(1)
-        speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+        if self.use_speaker_emb:
+            speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+            decoder_inputs = torch.cat((decoder_inputs, speaker_embs), 2)
+
         if self.use_accent_emb:
             accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-            decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
-        else:
-            decoder_inputs = torch.cat((encoder_outputs, speaker_embs), 2)
+            decoder_inputs = torch.cat((decoder_inputs, accent_embs), 2)
         # concatenate BNF, speaker, and accent vector element-wise
         
 

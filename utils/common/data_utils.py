@@ -162,7 +162,7 @@ def append_ppg(feats, f0):
     return np.concatenate((feats, lf0), axis=1)
 
 
-class PPGMelLoader(torch.utils.data.Dataset):
+class PPGMelDataset(torch.utils.data.Dataset):
     """Loads [ppg, mel] pairs."""
 
     def __init__(self, hparams, data_paths=None, data_utterance_paths=None):
@@ -379,8 +379,12 @@ def ppg_acoustics_collate(batch):
     ppg_padded = ppg_padded.transpose(1, 2)
     acoustic_padded = acoustic_padded.transpose(1, 2)
 
+    speaker_emb = torch.stack([x[2] for x in batch], dim=0)
+
+    accent_emb = torch.stack([x[3] for x in batch], dim=0)
+
     return ppg_padded, input_lengths, acoustic_padded, gate_padded,\
-        output_lengths
+        output_lengths, speaker_emb, accent_emb
 
 
 def utt_to_sequence(utt: Utterance, is_full_ppg=False, is_append_f0=False):
