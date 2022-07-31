@@ -316,12 +316,12 @@ class PPGMelDataset(torch.utils.data.Dataset):
             T*D1 PPG sequence, T*D2 mels
         """
         if self.ppg_subsampling_factor == 1:
-            curr_ppg = self.ppg_sequences[index]
+            curr_ppg = np.load(self.ppg_sequences[index])
         else:
-            curr_ppg = self.ppg_sequences[index][
-                       0::self.ppg_subsampling_factor, :]
+            curr_ppg = np.load(self.ppg_sequences[index][
+                       0::self.ppg_subsampling_factor, :])
 
-        return torch.from_numpy(curr_ppg), torch.from_numpy(self.acoustic_sequences[index]), torch.from_numpy(self.speaker_embs[index]), torch.from_numpy(self.accent_embs[index])
+        return torch.from_numpy(curr_ppg), torch.from_numpy(np.load(self.acoustic_sequences[index])), torch.from_numpy(np.load(self.speaker_embs[index])), torch.from_numpy(np.load(self.accent_embs[index]))
 
     def __len__(self):
         return len(self.ppg_sequences)
