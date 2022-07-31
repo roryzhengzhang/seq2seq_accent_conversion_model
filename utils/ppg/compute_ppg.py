@@ -17,15 +17,15 @@
 import os
 import re
 import logging
-from kaldi import nnet3
-from kaldi.nnet3 import Nnet
-from kaldi.util.io import read_matrix
-from kaldi.feat.functions import splice_frames
-from kaldi.feat.wave import WaveData
-from kaldi.feat.mfcc import Mfcc, MfccOptions
-from kaldi.matrix.sparse import SparseMatrix
-from kaldi.matrix import Matrix, Vector
-from kaldi.matrix.common import MatrixTransposeType
+from pykaldi import nnet3
+from pykaldi.nnet3 import Nnet
+from pykaldi.util.io import read_matrix
+from pykaldi.feat.functions import splice_frames
+from pykaldi.feat.wave import WaveData
+from pykaldi.feat.mfcc import Mfcc, MfccOptions
+from pykaldi.matrix.sparse import SparseMatrix
+from pykaldi.matrix import Matrix, Vector
+from pykaldi.matrix.common import MatrixTransposeType
 from utils.common import feat
 from utils.common import decode
 from numpy import ndarray
