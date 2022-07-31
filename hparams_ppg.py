@@ -71,7 +71,7 @@ def create_hparams(hparams_string=None, verbose=False):
         ################################
         # Model Parameters             #
         ################################
-        "n_symbols": 2000,
+        "n_symbols": 1024,
         "symbols_embedding_dim": 512,
 
         # Encoder parameters
