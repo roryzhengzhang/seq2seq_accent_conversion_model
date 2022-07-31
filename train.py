@@ -327,10 +327,10 @@ if __name__ == '__main__':
     args = parser.parse_args()
     if args.mode == 'bnf':
         from hparams import create_hparams
-        hparams = create_hparams(args.hparams)
+        hparams = create_hparams()
     else:
         from hparams_ppg import create_hparams
-        hparams = create_hparams(args.hparams)
+        hparams = create_hparams()
 
     torch.backends.cudnn.enabled = hparams.cudnn_enabled
     torch.backends.cudnn.benchmark = hparams.cudnn_benchmark
