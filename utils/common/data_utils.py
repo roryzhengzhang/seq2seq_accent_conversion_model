@@ -31,7 +31,6 @@
 
 """Modified from https://github.com/NVIDIA/tacotron2"""
 
-from msilib.schema import Error
 import os
 import pickle
 import random
@@ -221,7 +220,7 @@ class PPGMelDataset(torch.utils.data.Dataset):
             # self.ppg_sequences = data[0]
             # self.acoustic_sequences = data[1]
             if data_paths is None:
-                raise Error("data paths is None")
+                raise ValueError("data paths is None")
             
             with open(data_paths, 'r') as f:
                 for line in f:
