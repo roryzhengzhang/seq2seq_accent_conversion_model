@@ -175,6 +175,7 @@ class PPGMelDataset(torch.utils.data.Dataset):
         if data_utterance_paths is not None:
             self.data_utterance_paths = load_filepaths(data_utterance_paths)
         if data_paths is not None:
+            print(f"data paths: {data_paths}")
             self.data_paths = load_filepaths(data_paths)
         self.max_wav_value = hparams.max_wav_value
         self.sampling_rate = hparams.sampling_rate
