@@ -97,7 +97,6 @@ class Prenet(nn.Module):
              for (in_size, out_size) in zip(in_sizes, sizes)])
 
     def forward(self, x):
-        print(f"x shape: {x.size()}")
         for linear in self.layers:
             x = F.dropout(F.relu(linear(x)), p=0.5, training=True)
         return x
@@ -628,17 +627,18 @@ class Tacotron_PPG(nn.Module):
     def inference(self, inputs):
         # feature x len
         ppg, speaker_embs, accent_embs = inputs
-        ppg = ppg.transpose(1, 2)
         encoder_outputs = self.encoder.inference(ppg)
         encoder_output_length = encoder_outputs.size(1)
-        speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-        accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+
+        decoder_inputs = encoder_outputs
+
+        if self.use_speaker_emb:
+            speaker_embs = speaker_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
+            decoder_inputs = torch.cat((decoder_inputs, speaker_embs), 2)
 
         if self.use_accent_emb:
             accent_embs = accent_embs.unsqueeze(1).repeat(1, encoder_output_length, 1)
-            decoder_inputs = torch.cat((encoder_outputs, speaker_embs, accent_embs), 2)
-        else:
-            decoder_inputs = torch.cat((encoder_outputs, speaker_embs), 2)
+            decoder_inputs = torch.cat((decoder_inputs, accent_embs), 2)
 
         mel_outputs, gate_outputs, alignments = self.decoder.inference(
             decoder_inputs)
