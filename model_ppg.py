@@ -595,8 +595,6 @@ class Tacotron_PPG(nn.Module):
         ppg_lengths, output_lengths = ppg_lengths.data, output_lengths.data
 
         # embedded_inputs = self.embedding(bnf_padded).transpose(1, 2)
-
-        print(f"ppg_padded size: {ppg_padded.size()}")
         
         encoder_outputs = self.encoder(ppg_padded, ppg_lengths)
         decoder_inputs = encoder_outputs
