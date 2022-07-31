@@ -97,6 +97,7 @@ class Prenet(nn.Module):
              for (in_size, out_size) in zip(in_sizes, sizes)])
 
     def forward(self, x):
+        print(f"x shape: {x.size()}")
         for linear in self.layers:
             x = F.dropout(F.relu(linear(x)), p=0.5, training=True)
         return x
