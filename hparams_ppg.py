@@ -51,8 +51,8 @@ def create_hparams(hparams_string=None, verbose=False):
         # Data Parameters             #
         ################################
         "load_mel_from_disk": False,
-        "training_files": 'ppg_train_pairs.txt',
-        "validation_files": 'ppg_val_pairs.txt',
+        "training_files": 'bdl_train_pairs.txt',
+        "validation_files": 'bdl_val_pairs.txt',
         "text_cleaners": ['english_cleaners'],
 
         ################################
@@ -77,7 +77,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # Encoder parameters
         "encoder_kernel_size": 5,
         "encoder_n_convolutions": 3,
-        "encoder_embedding_dim": 1024,
+        "encoder_embedding_dim": 512,
         "decoder_input_dim": 1024,
 
         # Decoder parameters
