@@ -70,8 +70,8 @@ def prepare_dataloaders(hparams, mode='bnf'):
         return train_loader, valset, collate_fn
     else:
         print("loading PPG dataset")
-        trainset = PPGMelDataset(hparams.training_files, hparams)
-        valset = PPGMelDataset(hparams.validation_files, hparams)
+        trainset = PPGMelDataset(hparams, hparams.training_files)
+        valset = PPGMelDataset(hparams, hparams.validation_files)
 
         if hparams.distributed_run:
             train_sampler = DistributedSampler(trainset)
