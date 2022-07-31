@@ -5,6 +5,7 @@ from random import shuffle
 
 pairs = []
 refer_name = 'bdl'
+mode = 'ppg'
 root = os.path.dirname(os.path.abspath(__file__))
 
 for f in glob.glob(os.path.join(root, f"data_wav_16k/{refer_name}/*.wav")):
@@ -23,7 +24,7 @@ for f in glob.glob(os.path.join(root, f"data_wav_16k/{refer_name}/*.wav")):
     
 shuffle(pairs)
     
-with open('train_pairs.txt', 'w') as train_file, open('val_pairs.txt', 'w') as val_file:
+with open(f'{mode}_train_pairs.txt', 'w') as train_file, open(f'{mode}_val_pairs.txt', 'w') as val_file:
     for i, pair in enumerate(pairs):
         if i < len(pairs)-50:
             train_file.write(f"{pair[0]},{pair[1]},{pair[2]},{pair[3]}\n")

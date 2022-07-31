@@ -51,8 +51,8 @@ def create_hparams(hparams_string=None, verbose=False):
         # Data Parameters             #
         ################################
         "load_mel_from_disk": False,
-        "training_files": 'bdl_train_pairs.txt',
-        "validation_files": 'bdl_val_pairs.txt',
+        "training_files": 'ppg_train_pairs.txt',
+        "validation_files": 'ppg_val_pairs.txt',
         "text_cleaners": ['english_cleaners'],
 
         ################################
