@@ -5,7 +5,7 @@ from random import shuffle
 
 pairs = []
 refer_name = 'bdl'
-mode = 'ppg'
+mode = 'bnf'
 root = os.path.dirname(os.path.abspath(__file__))
 
 for f in glob.glob(os.path.join(root, f"data_wav_16k/{refer_name}/*.wav")):
