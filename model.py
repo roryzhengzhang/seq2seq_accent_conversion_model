@@ -4,7 +4,7 @@ from torch.autograd import Variable
 from torch import nn
 from torch.nn import functional as F
 from layers import ConvNorm, LinearNorm
-from model_utils import to_gpu, get_mask_from_lengths
+from model_utils import to_gpu, get_mask_from_lengths, get_mask_from_lengths_window_and_time_step
 
 
 class LocationLayer(nn.Module):
@@ -302,6 +302,7 @@ class Decoder(nn.Module):
         self.gate_threshold = hparams.gate_threshold
         self.p_attention_dropout = hparams.p_attention_dropout
         self.p_decoder_dropout = hparams.p_decoder_dropout
+        self.attention_window_size = hparams.attention_window_size
 
         self.prenet = Prenet(
             hparams.n_mel_channels * hparams.n_frames_per_step,
@@ -425,7 +426,7 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments
 
-    def decode(self, decoder_input):
+    def decode(self, decoder_input, attention_windowed_mask=None):
         """ Decoder step using stored states, attention and memory
         PARAMS
         ------
@@ -442,13 +443,28 @@ class Decoder(nn.Module):
             cell_input, (self.attention_hidden, self.attention_cell))
         self.attention_hidden = F.dropout(
             self.attention_hidden, self.p_attention_dropout, self.training)
+        self.attention_cell = F.dropout(
+            self.attention_cell, self.p_attention_dropout, self.training)
 
         attention_weights_cat = torch.cat(
             (self.attention_weights.unsqueeze(1),
              self.attention_weights_cum.unsqueeze(1)), dim=1)
-        self.attention_context, self.attention_weights = self.attention_layer(
-            self.attention_hidden, self.memory, self.processed_memory,
-            attention_weights_cat, self.mask)
+
+        # self.attention_context, self.attention_weights = self.attention_layer(
+        #     self.attention_hidden, self.memory, self.processed_memory,
+        #     attention_weights_cat, self.mask)
+        
+        if attention_windowed_mask is None:
+            self.attention_context, self.attention_weights = \
+                self.attention_layer(self.attention_hidden, self.memory,
+                                     self.processed_memory,
+                                     attention_weights_cat, self.mask)
+        else:
+            self.attention_context, self.attention_weights = \
+                self.attention_layer(self.attention_hidden, self.memory,
+                                     self.processed_memory,
+                                     attention_weights_cat,
+                                     attention_windowed_mask)
 
         self.attention_weights_cum += self.attention_weights
         decoder_input = torch.cat(
@@ -457,6 +473,8 @@ class Decoder(nn.Module):
             decoder_input, (self.decoder_hidden, self.decoder_cell))
         self.decoder_hidden = F.dropout(
             self.decoder_hidden, self.p_decoder_dropout, self.training)
+        self.decoder_cell = F.dropout(
+            self.decoder_cell, self.p_decoder_dropout, self.training)
 
         decoder_hidden_attention_context = torch.cat(
             (self.decoder_hidden, self.attention_context), dim=1)
@@ -492,8 +510,17 @@ class Decoder(nn.Module):
         mel_outputs, gate_outputs, alignments = [], [], []
         while len(mel_outputs) < decoder_inputs.size(0) - 1:
             decoder_input = decoder_inputs[len(mel_outputs)]
+
+            if self.attention_window_size is not None:
+                time_step = len(mel_outputs)
+                attention_windowed_mask = \
+                    get_mask_from_lengths_window_and_time_step(
+                        memory_lengths, self.attention_window_size, time_step)
+            else:
+                attention_windowed_mask = None
+
             mel_output, gate_output, attention_weights = self.decode(
-                decoder_input)
+                decoder_input, attention_windowed_mask)
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output.squeeze(1)]
             alignments += [attention_weights]
@@ -503,7 +530,7 @@ class Decoder(nn.Module):
 
         return mel_outputs, gate_outputs, alignments
 
-    def inference(self, memory):
+    def inference(self, memory, memory_lengths):
         """ Decoder inference
         PARAMS
         ------
@@ -522,7 +549,16 @@ class Decoder(nn.Module):
         mel_outputs, gate_outputs, alignments = [], [], []
         while True:
             decoder_input = self.prenet(decoder_input)
-            mel_output, gate_output, alignment = self.decode(decoder_input)
+
+            if self.attention_window_size is not None:
+                time_step = len(mel_outputs)
+                attention_windowed_mask = \
+                    get_mask_from_lengths_window_and_time_step(
+                        memory_lengths, self.attention_window_size, time_step)
+            else:
+                attention_windowed_mask = None
+
+            mel_output, gate_output, alignment = self.decode(decoder_input, attention_windowed_mask)
 
             mel_outputs += [mel_output.squeeze(1)]
             gate_outputs += [gate_output]
