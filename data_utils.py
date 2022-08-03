@@ -79,7 +79,7 @@ class AudioDataset(torch.utils.data.Dataset):
         return torch.from_numpy(np.load(wav_emb))
 
     def load_mel(self, mel):
-        return torch.from_numpy(np.load(mel))
+        return torch.from_numpy(np.load(mel, allow_pickle=True))
 
     def wav2vec(self, filename):
         audio_input, _ = sf.read(filename)
