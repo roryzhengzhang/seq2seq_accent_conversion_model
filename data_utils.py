@@ -62,6 +62,7 @@ class AudioDataset(torch.utils.data.Dataset):
         accent_emb = self.accent_info[index]
         # mel = self.get_mel(tar_wav)
         mel = self.load_mel(tar_mel)
+        print(f"mel shape: {mel.size()}")
         speaker_vector = self.load_speaker_embedding(speaker_emb)
         accent_vector = self.load_accent_embedding(accent_emb)
 
