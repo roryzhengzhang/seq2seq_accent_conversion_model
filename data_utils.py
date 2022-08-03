@@ -41,11 +41,11 @@ class AudioDataset(torch.utils.data.Dataset):
             for line in f:
                 line = line.replace('\n', '')
                 splits = line.split(',')
-                src_wav_emb, tar_wav, speaker, accent = splits[0], splits[1], splits[2], splits[3]
+                src_wav_emb, tar_mel, speaker, accent = splits[0], splits[1], splits[2], splits[3]
                 # filename = os.path.join(hparams.audio_dir, filename)
                 # self.src_audio_list.append(splits[0])
                 self.src_wav_embs.append(src_wav_emb)
-                self.tar_audio_list.append(tar_wav)
+                self.tar_audio_list.append(tar_mel)
                 self.speaker_info.append(speaker)
                 self.accent_info.append(accent)
 
@@ -56,11 +56,12 @@ class AudioDataset(torch.utils.data.Dataset):
         return len(self.src_wav_embs)
 
     def get_vec_mel_speaker_accent_pair(self, index):
-        tar_wav = self.tar_audio_list[index]
+        tar_mel = self.tar_audio_list[index]
         wav_vec = self.load_wav_embedding(self.src_wav_embs[index])
         speaker_emb = self.speaker_info[index]
         accent_emb = self.accent_info[index]
-        mel = self.get_mel(tar_wav)
+        # mel = self.get_mel(tar_wav)
+        mel = self.load_mel(tar_mel)
         speaker_vector = self.load_speaker_embedding(speaker_emb)
         accent_vector = self.load_accent_embedding(accent_emb)
 
@@ -76,6 +77,9 @@ class AudioDataset(torch.utils.data.Dataset):
 
     def load_wav_embedding(self, wav_emb):
         return torch.from_numpy(np.load(wav_emb))
+
+    def load_mel(self, mel):
+        return torch.from_numpy(np.load(mel))
 
     def wav2vec(self, filename):
         audio_input, _ = sf.read(filename)
