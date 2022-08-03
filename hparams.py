@@ -96,6 +96,7 @@ def create_hparams(hparams_string=None, verbose=False):
         # Location Layer parameters
         "attention_location_n_filters": 32,
         "attention_location_kernel_size": 31,
+        "attention_window_size": 20,
 
         # Mel-post processing network parameters
         "postnet_embedding_dim": 512,
