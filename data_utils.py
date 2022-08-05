@@ -56,12 +56,12 @@ class AudioDataset(torch.utils.data.Dataset):
         return len(self.src_wav_embs)
 
     def get_vec_mel_speaker_accent_pair(self, index):
-        tar_mel = self.tar_audio_list[index]
+        tar_wav = self.tar_audio_list[index]
         wav_vec = self.load_wav_embedding(self.src_wav_embs[index])
         speaker_emb = self.speaker_info[index]
         accent_emb = self.accent_info[index]
-        # mel = self.get_mel(tar_wav)
-        mel = self.load_mel(tar_mel)
+        mel = self.get_mel(tar_wav)
+        # mel = self.load_mel(tar_mel)
         speaker_vector = self.load_speaker_embedding(speaker_emb)
         accent_vector = self.load_accent_embedding(accent_emb)
 
